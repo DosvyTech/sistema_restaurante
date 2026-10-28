@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-10-27
+goal: "F1-01: establecer el inventario verificable del repositorio, los contratos de arquitectura y la matriz de trazabilidad sin implementar módulos."
+x-story: F1-01
+x-change-id: CHG-001
