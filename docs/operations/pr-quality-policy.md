@@ -14,7 +14,7 @@ Observed check names on the real PR run are: `quality / static`, `quality / data
 
 Do not bypass failed checks to merge. If a ruleset allows administrator bypass for recovery, restrict it to repository administrators, document the reason in the PR, and use it only to restore a broken protection configuration or address an urgent incident. Recheck the ruleset after any recovery. The administrator account must retain its explicit bypass/recovery route; never test policy by merging a PR.
 
-For a controlled failure test, open a throwaway PR that introduces only a deterministic failing assertion in a test fixture and verify GitHub marks the required check failed and the PR as blocked. Remove the failure on the same branch and verify the same check becomes successful. Keep both PRs unmerged and close them after recording the evidence. A green run is necessary but not sufficient for merge: review, resolved discussion, and the remaining required checks still apply.
+For a controlled failure test, use a throwaway PR with a deterministic failing assertion and verify GitHub marks a required check failed and blocks the PR. For the positive case, verify every required check and independent review on the implementation PR; the ruleset must evaluate both pull request and required status checks successfully. A green run is necessary but not sufficient for merge: review, resolved discussion, and the remaining required checks still apply.
 
 ## Dependency audit and provisional exception
 
@@ -52,11 +52,12 @@ YAML validation or local test output is not evidence that GitHub enforced a rule
 | [PR #9 quality run](https://github.com/DosvyTech/sistema_restaurante/actions/runs/41238494514) | Success: `quality / static`, `quality / database`, and `quality / e2e`. |
 | [PR #9 dependency and secrets run](https://github.com/DosvyTech/sistema_restaurante/actions/runs/41238494403) | Success: `security / dependency audit` (runtime audit zero, full audit exception accepted) and `security / secrets` (fixture detected; repository range scan passed). |
 | [PR #9 CodeQL run](https://github.com/DosvyTech/sistema_restaurante/actions/runs/41238494533) | Success: `codeql / analyze (javascript-typescript)` executed and reported through CodeQL. |
-| [PR #9 implementation draft](https://github.com/DosvyTech/sistema_restaurante/pull/9) | All six required contexts passed. It remains a draft with `REVIEW_REQUIRED`, so no merge is claimed. |
+| [PR #9 implementation](https://github.com/DosvyTech/sistema_restaurante/pull/9) | `Steven2413` (member) approved head `3c983672c662a7f29a6fec5459ff1f6153f24649` at 2026-10-31 20:54:21 UTC. All six required contexts passed. GitHub reports no unresolved review threads. PR merged at 20:54:45 UTC as `2bd5434bab90a3d4b10a94c5b13012ae3944f3f9`. |
 | [PR #10 controlled failure](https://github.com/DosvyTech/sistema_restaurante/pull/10) | `quality / static` failed at the intentional unit assertion; the other five required contexts passed. GitHub returned `BLOCKED` with `REVIEW_REQUIRED` while the required check was failed. The PR was closed without merge and its temporary remote branch deleted. |
-| [Active repository ruleset](https://github.com/DosvyTech/sistema_restaurante/rules/26286430) | ID `26286430`, active on `refs/heads/main`; requires PR, one approval, resolved conversations, and all six required contexts. Admin role has `pull_request`-only bypass for recovery; direct pushes are not bypassed. |
+| [Active repository ruleset](https://github.com/DosvyTech/sistema_restaurante/rules/26286430) | ID `26286430`, active on `refs/heads/main`; requires PR, one approval, resolved conversations, and all six required contexts. Admin role has `pull_request`-only bypass for recovery. |
+| Ruleset evaluation for PR #9 merge | Rule suite `4835811329` records `result: pass`; both `pull_request` and `required_status_checks` evaluations from ruleset `26286430` were `pass`. GitHub's rule-suite result is recorded as pass; no separate inference about bypass is needed. |
 
-The negative enforcement case is demonstrated. The positive PR has successful checks but has not received an independent approval; keep the positive-review portion of CHG-005 task 3 pending until that case is reviewed. Do not merge either test PR as part of CHG-005.
+The negative enforcement case is demonstrated by PR #10, and the positive case by PR #9's independent approval, successful required checks, successful ruleset evaluation, and merge. These records complete the acceptance evidence for CHG-005 task 3. The separate documentation close-out PR must still be reviewed and merged normally; do not use an administrative bypass.
 
 ### Local validation record (2026-10-31)
 
@@ -74,6 +75,6 @@ Environment: Node.js `24.12.0`, npm `11.6.2`, Docker Engine `29.9.2`, PostgreSQL
 | Full dependency audit | The custom checker accepted only the four documented moderate findings on the exact Drizzle Kit/esbuild path. Full `npm audit` remains non-clean. Six synthetic auditor tests passed. |
 | Secret scanner smoke test | TruffleHog `3.99.7` detected the synthetic fixture; output was withheld and temporary files were removed. |
 
-Local results do not prove GitHub behavior. See the real Actions and ruleset evidence above. An independent approval on a successful PR remains unverified, so CHG-005 task 3 stays pending.
+Local results do not prove GitHub behavior. The real Actions, independent review, merge, and ruleset-evaluation evidence above demonstrate the positive and negative protection cases for CHG-005 task 3.
 
 Before this change, `main` had no repository or inherited rulesets. The GitHub API reported repository administrator permissions and Actions enabled with read-only default workflow permissions. Repository ruleset management was available and the active ruleset above was created. The organization-level ruleset endpoint was not queried successfully because the current token lacks `admin:org`; no organization-level rule is claimed.
