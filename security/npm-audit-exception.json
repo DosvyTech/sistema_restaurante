@@ -1,0 +1,59 @@
+{
+  "owner": "DosvyTech repository maintainers",
+  "expiresOn": "2027-01-31",
+  "reason": "Provisional CHG-003 exception for the development-only Drizzle Kit esbuild chain; stable compatible remediation has not been established.",
+  "resolvedDependencyPath": [
+    { "name": "drizzle-kit", "version": "0.31.11", "lockPath": "node_modules/drizzle-kit" },
+    { "name": "@esbuild-kit/esm-loader", "version": "2.6.5", "lockPath": "node_modules/@esbuild-kit/esm-loader" },
+    { "name": "@esbuild-kit/core-utils", "version": "3.3.2", "lockPath": "node_modules/@esbuild-kit/core-utils" },
+    { "name": "esbuild", "version": "0.18.20", "lockPath": "node_modules/@esbuild-kit/core-utils/node_modules/esbuild" }
+  ],
+  "expected": {
+    "@esbuild-kit/core-utils": {
+      "name": "@esbuild-kit/core-utils",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": ["esbuild"],
+      "effects": ["@esbuild-kit/esm-loader"],
+      "range": "*",
+      "nodes": ["node_modules/@esbuild-kit/core-utils"]
+    },
+    "@esbuild-kit/esm-loader": {
+      "name": "@esbuild-kit/esm-loader",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": ["@esbuild-kit/core-utils"],
+      "effects": ["drizzle-kit"],
+      "range": "*",
+      "nodes": ["node_modules/@esbuild-kit/esm-loader"]
+    },
+    "drizzle-kit": {
+      "name": "drizzle-kit",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": ["@esbuild-kit/esm-loader"],
+      "effects": [],
+      "range": "0.19.0 - 1.0.0-beta.1-fd8bfcc",
+      "nodes": ["node_modules/drizzle-kit"]
+    },
+    "esbuild": {
+      "name": "esbuild",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1102341,
+          "name": "esbuild",
+          "dependency": "esbuild",
+          "title": "esbuild enables any website to send any requests to the development server and read the response",
+          "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+          "severity": "moderate",
+          "range": "<=0.24.2"
+        }
+      ],
+      "effects": ["@esbuild-kit/core-utils"],
+      "range": "<=0.24.2",
+      "nodes": ["node_modules/@esbuild-kit/core-utils/node_modules/esbuild"]
+    }
+  }
+}
