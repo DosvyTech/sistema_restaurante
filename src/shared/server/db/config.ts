@@ -47,15 +47,17 @@ function databaseName(url: URL, variable: string): string {
   return name;
 }
 
+function databaseHost(url: URL): string {
+  const host = url.hostname.toLowerCase();
+  return localHosts.has(host) ? "loopback" : host;
+}
+
 function hasSameDatabaseTarget(left: URL, right: URL): boolean {
   return (
-    left.protocol === right.protocol &&
-    left.hostname.toLowerCase() === right.hostname.toLowerCase() &&
+    databaseHost(left) === databaseHost(right) &&
     (left.port || "5432") === (right.port || "5432") &&
     databaseName(left, "DATABASE_URL") ===
-      databaseName(right, "TEST_DATABASE_URL") &&
-    left.username === right.username &&
-    left.password === right.password
+      databaseName(right, "TEST_DATABASE_URL")
   );
 }
 
