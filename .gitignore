@@ -3,6 +3,9 @@ node_modules/
 out/
 build/
 coverage/
+playwright-report/
+test-results/
+blob-report/
 *.tsbuildinfo
 next-env.d.ts
 
