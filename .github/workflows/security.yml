@@ -1,0 +1,61 @@
+name: security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dependency-audit:
+    name: security / dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Require a clean production dependency audit
+        run: npm audit --omit=dev
+      - name: Report complete dependency audit with the expiring esbuild exception
+        run: node scripts/verify-npm-audit-exception.mjs
+      - name: Verify audit exception guard with synthetic reports
+        run: node --test tests/security/npm-audit-exception.test.mjs
+
+  secrets:
+    name: security / secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out full history for range scan
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Verify secret scanner detects a synthetic fixture
+        run: node scripts/verify-secret-scanner.mjs
+      - name: Scan pull request or push range for secrets
+        uses: trufflesecurity/trufflehog@421026a6540c63cf143ef53a5859389d473e88da # reviewed upstream action revision
+        with:
+          version: 3.99.7
+          extra_args: --results=verified,unknown
