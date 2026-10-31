@@ -51,6 +51,28 @@ test("test URL cannot target the same database as the application URL", () => {
   );
 });
 
+test("test URL rejects the same target when credentials differ", () => {
+  assert.throws(() =>
+    getTestDatabaseUrl({
+      DATABASE_URL:
+        "postgresql://application-user:application-pass@127.0.0.1:55432/dosvy_test",
+      TEST_DATABASE_URL:
+        "postgresql://test-user:test-pass@127.0.0.1:55432/dosvy_test",
+    }),
+  );
+});
+
+test("test URL treats equivalent loopback hosts as the same target", () => {
+  assert.throws(() =>
+    getTestDatabaseUrl({
+      DATABASE_URL:
+        "postgresql://application-user:application-pass@localhost:55432/dosvy_test",
+      TEST_DATABASE_URL:
+        "postgresql://test-user:test-pass@[::1]:55432/dosvy_test",
+    }),
+  );
+});
+
 test("test operations never fall back to DATABASE_URL", () => {
   assert.throws(
     () =>
