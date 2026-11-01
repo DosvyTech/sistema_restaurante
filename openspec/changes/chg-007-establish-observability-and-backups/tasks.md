@@ -1,0 +1,9 @@
+# CHG-007 / F1-07 — Tres tareas ejecutables
+
+> **Dependencia BLOQUEANTE:** antes de Apply confirmar CHG-006/F1-06 implementado, validado en staging, integrado y disponible en checkout. No confundir planificación CHG-006 con infraestructura funcional. No iniciar CHG-008, merges o archive automáticamente. Máximo 3 tareas.
+
+- [ ] **1. OPS — Registros estructurados, salud y alertas.** Añadir health/readiness no sensibles, logging JSON acotado con redacción de secretos, métricas/umbrales de app, proxy, DB, disco, backups y WAL, alertas observables fuera del VPS, escalamiento y retención. **Evidencia:** simulación controlada de caídas/backup atrasado, mensaje real al canal de staging autorizado, cierre del incidente y ninguna credencial expuesta. Si no hay canal o infraestructura, mantener tarea abierta.
+
+- [ ] **2. DB/OPS — pgBackRest, WAL y copias externas cifradas.** Configurar pgBackRest compatible con PostgreSQL de CHG-006, repositorio externo fuera del VPS con cifrado y claves recuperables, full/diff/incremental adecuados, archivado WAL, scheduling/retención, comprobaciones y alertas. **Evidencia:** backup externo real y recuperable, `pgbackrest check/info`, llegada continua de WAL, fallos controlados y ausencia de secretos en repo/logs. No considerar backup local equivalente a respaldo externo. Sin almacenamiento externo autorizado, mantener tarea abierta.
+
+- [ ] **3. QA — Restauración aislada y RPO/RTO.** Ejecutar restore y PITR desde backup/WAL externo a instalación staging aislada, verificar integridad y aplicación, registrar mediciones UTC y resultados de pérdidas simuladas, documentar runbook completo. **Evidencia:** RPO observado <=15m y RTO observado <=4h sobre escenario definido; no declarar objetivos cumplidos sin medición. Correr tests pertinentes y OpenSpec strict; preservar producción y stacks existentes.
