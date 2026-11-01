@@ -2,9 +2,26 @@ import { describe, expect, it } from "vitest";
 
 import { validateDeploymentTarget } from "../../scripts/deployment-target.mjs";
 
+function databaseUrl(host: string, database = "dosvy_cafe_01") {
+  const url = new URL("postgresql://postgres");
+  url.username = "dosvy_owner";
+  url.password = "synthetic-password";
+  url.hostname = host;
+  url.port = "5432";
+  url.pathname = `/${database}`;
+  return url.toString();
+}
+
+function urlWithoutCredentials() {
+  const url = new URL("postgresql://postgres");
+  url.port = "5432";
+  url.pathname = "/dosvy_cafe_01";
+  return url.toString();
+}
+
 describe("validateDeploymentTarget", () => {
   const validTarget = {
-    databaseUrl: "postgresql://dosvy_owner:synthetic-password@postgres:5432/dosvy_cafe_01",
+    databaseUrl: databaseUrl("postgres"),
     installationId: "cafe_01",
     confirmation: "cafe_01",
   };
@@ -24,7 +41,7 @@ describe("validateDeploymentTarget", () => {
       expect(() =>
         validateDeploymentTarget({
           ...validTarget,
-          databaseUrl: `postgresql://dosvy_owner:synthetic-password@${host}:5432/dosvy_cafe_01`,
+          databaseUrl: databaseUrl(host),
         }),
       ).toThrow(/private postgres service/i);
     }
@@ -34,7 +51,7 @@ describe("validateDeploymentTarget", () => {
     expect(() =>
       validateDeploymentTarget({
         ...validTarget,
-        databaseUrl: "postgresql://dosvy_owner:synthetic-password@postgres:5432/dosvy_dev",
+        databaseUrl: databaseUrl("postgres", "dosvy_dev"),
       }),
     ).toThrow(/installation database/i);
   });
@@ -46,7 +63,7 @@ describe("validateDeploymentTarget", () => {
     expect(() =>
       validateDeploymentTarget({
         ...validTarget,
-        databaseUrl: "postgresql://postgres:5432/dosvy_cafe_01",
+        databaseUrl: urlWithoutCredentials(),
       }),
     ).toThrow(/credentials/i);
   });

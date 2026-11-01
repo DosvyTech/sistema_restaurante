@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { validateDeploymentConfiguration } from "../../scripts/deployment-config.mjs";
 
+function databaseUrl(password: string, database = "dosvy_restaurant_01") {
+  const url = new URL("postgresql://postgres");
+  url.username = "dosvy_owner";
+  url.password = password;
+  url.hostname = "postgres";
+  url.port = "5432";
+  url.pathname = `/${database}`;
+  return url.toString();
+}
+
 const validConfiguration = {
   installationId: "restaurant_01",
   composeProject: "dosvy-restaurant-01",
@@ -11,8 +21,7 @@ const validConfiguration = {
   appImage: `ghcr.io/dosvytech/sistema_restaurante:release@sha256:${"a".repeat(64)}`,
   postgresImage: `postgres:18.6-alpine@sha256:${"b".repeat(64)}`,
   caddyImage: `caddy:2.10.2-alpine@sha256:${"c".repeat(64)}`,
-  databaseUrl:
-    "postgresql://dosvy_owner:synthetic-password@postgres:5432/dosvy_restaurant_01",
+  databaseUrl: databaseUrl("synthetic-password"),
   postgresPassword: "synthetic-password",
 };
 
@@ -51,8 +60,7 @@ describe("validateDeploymentConfiguration", () => {
     expect(() =>
       validateDeploymentConfiguration({
         ...validConfiguration,
-        databaseUrl:
-          "postgresql://dosvy_owner:wrong-password@postgres:5432/dosvy_restaurant_01",
+        databaseUrl: databaseUrl("wrong-password"),
       }),
     ).toThrow(/password file/i);
   });
