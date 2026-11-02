@@ -1,0 +1,109 @@
+name: ${DOSVY_COMPOSE_PROJECT:?Set DOSVY_COMPOSE_PROJECT to a unique installation project}
+
+services:
+  postgres:
+    image: ${DOSVY_POSTGRES_IMAGE:?Set the approved PostgreSQL image and digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DOSVY_DATABASE_NAME:?Set an installation-specific database name}
+      POSTGRES_USER: ${DOSVY_DATABASE_USER:?Set an installation-specific database user}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  app:
+    image: ${DOSVY_APP_IMAGE:?Set the immutable application release image}
+    restart: unless-stopped
+    environment:
+      DOSVY_INSTALLATION_ID: ${DOSVY_INSTALLATION_ID:?Set the installation identifier}
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    secrets:
+      - source: database_url
+        target: database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks:
+      - edge
+      - data
+
+  caddy:
+    image: ${DOSVY_CADDY_IMAGE:?Set the approved Caddy image and digest}
+    restart: unless-stopped
+    environment:
+      DOSVY_DOMAIN: ${DOSVY_DOMAIN:?Set the authorized DNS name}
+    ports:
+      - "${DOSVY_HTTP_BIND_ADDRESS:-0.0.0.0}:${DOSVY_HTTP_PORT:-80}:80"
+      - "${DOSVY_HTTP_BIND_ADDRESS:-0.0.0.0}:${DOSVY_HTTPS_PORT:-443}:443"
+      - "${DOSVY_HTTP_BIND_ADDRESS:-0.0.0.0}:${DOSVY_HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - edge
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:2019/config/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  migrate:
+    image: ${DOSVY_APP_IMAGE:?Set the immutable application release image}
+    profiles:
+      - operations
+    command: ["node", "scripts/deploy-migrate.mjs"]
+    restart: "no"
+    environment:
+      DOSVY_INSTALLATION_ID: ${DOSVY_INSTALLATION_ID:?Set the installation identifier}
+      DOSVY_MIGRATION_CONFIRMATION: ${DOSVY_MIGRATION_CONFIRMATION:-}
+      DOSVY_DEPLOYMENT_MODE: ${DOSVY_DEPLOYMENT_MODE:-}
+    secrets:
+      - source: database_url
+        target: database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data
+
+secrets:
+  postgres_password:
+    file: ${DOSVY_POSTGRES_PASSWORD_FILE:?Set a password file outside the repository}
+  database_url:
+    file: ${DOSVY_DATABASE_URL_FILE:?Set a database URL file outside the repository}
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+  data:
+    internal: true
