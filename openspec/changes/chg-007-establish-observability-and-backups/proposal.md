@@ -8,9 +8,9 @@ Una instalación Dosvy por VPS exige detectar fallos, conservar respaldos fuera 
 
 ## What Changes
 
-- Observabilidad **ligera**: logs estructurados/rotados, healthchecks y avisos esenciales de caída de app/DB, espacio insuficiente y backup atrasado/fallido; usar un servicio externo de alertas sencillo si aporta más fiabilidad que montar un stack de métricas.
-- pgBackRest (u opción más simple solo si satisface los mismos objetivos medidos) con respaldos íntegros cifrados y repositorio **externo al VPS**, retención y archivado WAL/PITR según la ventana RPO aprobada, con comprobaciones de integridad. Control de credenciales y permisos; evitar incoherencias entre PostgreSQL 18.6 y pgBackRest.
-- Restauración de una instalación en **staging aislado** a un punto temporal verificable; cuantificar RPO observado y RTO observado. Objetivos: RPO máximo **15 minutos** y RTO máximo **4 horas**, condicionados a mediciones y pruebas de fallos realistas, no garantizados por configuración.
+- Observabilidad **ligera**: healthchecks y logs JSON con rotación para Next.js, PostgreSQL y Caddy; alertas esenciales por una ruta de notificación externa sencilla e independiente del VPS. Un receptor aislado de pruebas puede validar el flujo durante desarrollo, pero no sustituye la entrega real de notificaciones externas antes de producción. No desplegar Prometheus, Grafana, ELK ni servicios adicionales sin una necesidad demostrada.
+- pgBackRest como solución principal para copias cifradas, archivado WAL y recuperación puntual. En desarrollo, usar SeaweedFS `weed mini` como endpoint S3 dentro de un proyecto Docker separado y desechable, con datos y credenciales sintéticos, versión o digest verificable y sin exposición pública. La compatibilidad concreta de la API S3 con pgBackRest se debe demostrar mediante backup, restore y WAL; si falla, evaluar y justificar una alternativa S3 compatible mantenida antes de implementarla. Para producción, respaldos fuera del VPS, cifrados, con credenciales independientes y recuperación comprobada.
+- Restauración en una instalación PostgreSQL desechable con datos sintéticos; registrar tiempos observados, transacciones recuperadas, datos posiblemente perdidos y límites de la simulación. Objetivos: RPO máximo **15 minutos** y RTO máximo **4 horas**, sujetos a medición; los resultados locales no se extrapolan automáticamente a producción.
 
 ## Capabilities
 
@@ -22,7 +22,7 @@ Una instalación Dosvy por VPS exige detectar fallos, conservar respaldos fuera 
 
 ## Impacto y restricciones
 
-Artefactos esperables: `deploy/` según estructura realmente entregada por CHG-006, políticas de monitoreo/respaldos, configuración pgBackRest, scripts de validación sin secretos y `docs/operations/backup-restore-runbook.md`. Nunca conectar repositorio de backups real o VPS de clientes desde CI de PR; no leer ni copiar datos personales reales a entornos de ensayo. Los secretos y la clave de cifrado quedan fuera de Git y de logs. No eliminar backups ni volúmenes al probar. Para desarrollo usar almacenamiento externo **de prueba** (p. ej. objeto S3 compatible separado del host o emulador remoto aislado, etiquetado como prueba) y datos sintéticos; un simulador local no acredita pérdida real de VPS ni copia externa real. Los requisitos de puesta en servicio con datos reales conservan alertas independientes, cifrado y restauración verificable. Si no hay evidencia suficiente para cumplir una tarea, dejarla pendiente.
+Artefactos esperables: `deploy/` según estructura realmente entregada por CHG-006, políticas de observabilidad/respaldos, configuración pgBackRest, pruebas sin secretos y `docs/operations/backup-restore-runbook.md`. Nunca conectar repositorios de backups reales o VPS de clientes desde CI de PR ni copiar datos personales a pruebas. Los secretos y claves quedan fuera de Git y logs. El proyecto Docker de SeaweedFS de pruebas debe tener nombre, red, volúmenes y credenciales propios; sus recursos serán desechables y nunca se eliminarán recursos ajenos. La aceptación local no acredita un destino externo real ni recuperación ante pérdida real del VPS. Antes de producción se requieren almacenamiento fuera del VPS, cifrado, credenciales independientes, notificaciones externas y restauración comprobada. Si falta evidencia, la tarea correspondiente queda pendiente.
 
 ## Cierre
 

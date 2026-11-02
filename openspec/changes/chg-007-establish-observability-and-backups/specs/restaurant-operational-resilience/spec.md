@@ -12,12 +12,28 @@ Each deployment SHALL expose non-sensitive health signals and structured, bounde
 ### Requirement: Lightweight independently observable alerts
 The platform SHALL emit actionable alerts for service outage, backup failure/staleness, WAL archival lag and material infrastructure degradation via an authorized notification path independent of the failing VPS.
 
+During development, tests MAY use an isolated synthetic alert receiver to verify alert generation, delivery, recovery and closure. This receiver SHALL NOT satisfy the production requirement for real notifications delivered through an authorized external path independent of the VPS.
+
 #### Scenario: Controlled alert
 - **WHEN** staging simulates loss of a critical service or stale backup
 - **THEN** the responsible operator receives an identifiable alert and can observe its recovery state
 
 ### Requirement: Encrypted recoverable backups with production externalization
-Each production installation SHALL back up PostgreSQL through a compatible, documented, minimal backup solution (prefer pgBackRest where WAL/PITR supports the RPO goal) to durable storage separate from the restaurant VPS, with encryption, recoverable credentials, retention and integrity checks. Engineering tests MAY use isolated synthetic data and separate disposable test storage, explicitly labelled as non-production evidence.
+Each production installation SHALL back up PostgreSQL using documented pgBackRest to encrypted, durable storage separate from the restaurant VPS, with recoverable credentials, retention and integrity checks.
+
+#### Scenario: Production backup destination
+- **WHEN** an installation is approved for production
+- **THEN** its PostgreSQL backups use a durable repository outside the VPS with encryption and credentials independent from the host
+- **AND** the repository has a documented, tested recovery procedure and integrity checks
+
+### Requirement: Isolated S3 backup development target
+Development backup tests SHALL use synthetic data and credentials in a disposable, isolated SeaweedFS `weed mini` S3 project with a verifiable pinned image and no public exposure.
+
+#### Scenario: pgBackRest compatibility with SeaweedFS
+- **WHEN** the pinned pgBackRest and SeaweedFS versions run the backup integration tests
+- **THEN** the tests demonstrate the required S3 operations for backup, restore and WAL archival/recovery
+- **AND** the test repository is not represented as production external storage
+- **AND** if a required operation fails, implementation stops until a maintained S3-compatible alternative is evaluated and justified
 
 #### Scenario: Simulated isolated recovery
 - **WHEN** development tests restore synthetic backups to a fresh isolated database
@@ -51,6 +67,11 @@ The documented operational objectives SHALL be RPO <=15 minutes and RTO <=4 hour
 #### Scenario: Unmeasured or exceeded objective
 - **WHEN** an isolated recovery cannot run, lacks authentic external backup/WAL evidence, or exceeds either objective
 - **THEN** Task 3 remains incomplete, the measured result or blocker is reported, and the objectives are not represented as achieved
+
+#### Scenario: Synthetic disposable recovery measurement
+- **WHEN** a disposable PostgreSQL installation is restored from synthetic test backups to a recorded point in time
+- **THEN** the evidence records observed elapsed RPO/RTO, confirmed and recovered transactions, possible data loss, UTC timestamps and simulation limits
+- **AND** local measurements are not automatically extrapolated to production
 
 ### Requirement: Deployment dependency and non-destructive checks
 The Change SHALL not be implemented before CHG-006 is integrated with successful **real isolated Docker deployment/upgrade tests**; tests and recovery operations SHALL never remove unrelated installations, volumes or production data. A separate production go-live gate SHALL verify real external backups, independently delivered alerts and a tested recovery procedure.

@@ -11,17 +11,17 @@ Como operador Dosvy, quiero detectar incidentes y recuperar una instalación sin
 
 ## Alcance
 
-1. Observabilidad ligera: logs JSON/rotación sin secretos, health de app/DB y alertas externas esenciales por caída, disco insuficiente y fallos/atrasos de backup; sin paneles complejos salvo necesidad.
-2. pgBackRest o alternativa sencilla técnicamente equivalente, respaldo cifrado **externo al VPS real** antes de producción, claves recuperables y retención; WAL/PITR si es necesario para RPO de 15 minutos. No se aceptan solo snapshots locales.
-3. Restore/PITR con datos sintéticos en entorno de prueba separado y descartable, integridad y métricas RPO/RTO del ejercicio; sin presentar la simulación como prueba real del VPS público.
+1. Observabilidad ligera: healthchecks de Next.js, PostgreSQL y Caddy; logs JSON con rotación y alertas esenciales por ruta externa sencilla. Receptor de alertas sintético aislado permitido solo para pruebas; notificaciones externas reales requeridas antes de producción. Evitar stacks pesados sin necesidad demostrada.
+2. pgBackRest con SeaweedFS `weed mini` como almacenamiento S3 sintético de desarrollo, en proyecto Docker separado y desechable, imagen fijada/verificable, credenciales sintéticas y sin exposición pública. Verificar API S3 con backup, restore, cifrado y WAL; evaluar una alternativa compatible mantenida si falla antes de implementarla. Producción requiere almacenamiento cifrado fuera del VPS, credenciales independientes y recuperación comprobada.
+3. Restore/PITR en PostgreSQL desechable con datos sintéticos; registrar RPO/RTO observados, timestamps, transacciones recuperadas/perdidas y límites de simulación. Objetivos <=15 minutos / <=4 horas sujetos a medición; no extrapolar automáticamente a producción.
 
 ## Tres tareas
 
-**T1 / OPS:** salud, logs y alertas; evidencia: avisos reales enviados y resueltos con canal autorizado.
+**T1 / OPS:** healthchecks, logs rotados y alertas esenciales; un receptor aislado prueba el flujo en desarrollo, pero no sustituye el canal externo real requerido antes de producción.
 
-**T2 / DB-OPS:** pgBackRest, copias remotas cifradas, WAL y retención; evidencia: backup recuperable real fuera del VPS, pgBackRest check/info, monitoreo del retraso y pruebas de falla.
+**T2 / DB-OPS:** pgBackRest y prueba S3 aislada con SeaweedFS `weed mini`; evidencia de compatibilidad de backup/restore/WAL. La evidencia local no demuestra copia externa real de producción.
 
-**T3 / QA:** runbook de restauración y simulacro aislado; evidencia: recuperación puntual, integridad de datos, RPO/RTO observados y documentación.
+**T3 / QA:** runbook y simulacro desechable; evidencia: recuperación puntual, integridad, transacciones recuperadas/perdidas y RPO/RTO observados. Los valores locales no se extrapolan automáticamente a producción.
 
 ## Acceptance criteria
 
