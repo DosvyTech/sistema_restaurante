@@ -64,6 +64,22 @@ For each change, record outside the repository or in an access-controlled operat
 
 Inspect only the chosen project with `docker compose ... ps` and `docker compose ... logs --since ... app postgres caddy`; check logs for accidental sensitive output before retaining them. Normal retirement and data deletion require a separate approved backup/retention process. Never remove volumes during routine deployment or use global Docker cleanup.
 
+## Engineering completion versus production go-live
+
+This platform targets a **small restaurant** (roughly 1–10 simultaneous users), with one Next.js app, one private PostgreSQL and one Caddy instance on a dedicated VPS. Avoid Kubernetes, shared control planes or complex monitoring stacks without a demonstrated operational need. The full product principles are at `docs/architecture/small-restaurant-principles.md`.
+
+CHG-006 may close after **actual isolated Docker validation**: two distinct Compose installations using synthetic data, correct app/DB/Caddy health, local-only HTTP→HTTPS Caddy routing (test certificate), internal database networking, migrations/ledger, fresh installation, controlled image update, idempotency and preservation of existing projects. Do not claim a public certificate or remote VPS test because a local disposable environment passed.
+
+**Mandatory public go-live gate (must be performed on the authorized destination host):**
+
+1. Verify DNS points to the intended VPS and the public certificate is trusted for the exact hostname; verify redirect and renewal procedure from an external client, without `curl -k`.
+2. From an external host, verify public PostgreSQL 5432 and internal Next.js 3000 are unreachable; confirm only intended 80/443 and restricted SSH are exposed.
+3. Verify secrets/permissions, backups and a tested restore path **before storing real restaurant data**; record which recovery procedure is active and its owner.
+4. Confirm an immutable app image, compatibility of migrations, volume persistence after restart, health checks and functional smoke checks.
+5. Record operator, UTC date, target hostname, version, checks, and decision. If any item fails or infrastructure is unavailable, mark **NOT APPROVED FOR PRODUCTION** and do not serve clients.
+
+This is a separate operational release gate, not an invented successful public-staging test. Closing CHG-006 code does not waive or certify it.
+
 ## CHG-006 verification and limits
 
 Local disposable tests used two projects (`dosvy-install-a` and `dosvy-install-b`) with different synthetic database credentials, databases, networks, volumes and loopback-only ports. Both app/PostgreSQL/Caddy sets became healthy. Installation A was migrated on the earlier image, then its image was updated to the validation image and migrations were rerun; its migration ledger remained at one row and the updated app became healthy. Installation B received its initial migration and also had one ledger row. Local HTTP-to-HTTPS routing was checked with Caddy's local certificate in the stack validation; this is not public TLS evidence. Both temporary test projects were removed by their exact Compose project names. The existing `dosvy-chg003-postgres` container remained exited with the same ID, while `dosvy_chg003_pgdata` and `dosvy-chg003_default` remained present and untouched.

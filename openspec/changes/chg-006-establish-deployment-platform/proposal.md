@@ -10,7 +10,7 @@ Dosvy entrega un monolito modular Next.js/Node y PostgreSQL/Drizzle, probado en 
 
 - Declarar configuración de despliegue separada y versionada para contenedores de aplicación Next.js, PostgreSQL por instalación y Caddy. Imágenes reproducibles; configuración por instalación, sin editar código ni copiar secretos al repositorio.
 - Introducir Caddy como único punto HTTP(S) público; DNS, certificados TLS automáticos y persistentes, red privada para PostgreSQL y aplicación. Seguridad de host y administración documentadas.
-- Proveer inicialización, actualización y rollback controlados, con migraciones de Drizzle versionadas revisadas; ejecutar una instalación nueva y un despliegue en **staging autorizado** con evidencia. No declarar HTTPS real sin dominio DNS y certificado comprobados.
+- Proveer inicialización, actualización y rollback de aplicación controlados, con migraciones Drizzle versionadas; validar una instalación nueva y una actualización **en proyectos Docker aislados con datos sintéticos**. El staging público y su TLS se verifican al habilitar el primer VPS real, no se simulan como completos.
 
 ## Capabilities
 
@@ -28,6 +28,12 @@ Posibles artefactos en Apply: `deploy/` (Compose, Caddyfile, Dockerfile, scripts
 
 No desplegar en servidores de clientes ni producción real sin autorización explícita; no facturación/autenticación de negocio; no Kubernetes; no introducir monitoring/pgBackRest/WAL/alertas (CHG-007); no DNS ficticio, certificados falsamente presentados como públicos, ni credenciales de producción en CI o Git. No usar `drizzle-kit push` ni desactivar protecciones del migrador local para aceptar una URL remota.
 
-## Cierre
+## Principio de alcance — restaurante pequeño
 
-Tres tareas y evidencia real de instalación limpia, aislamiento de bases, acceso TLS válido en staging cuando esté autorizado y actualización/rollback documentados. Si falta VPS/dominio/acceso aprobado para validar staging, dejar T3 pendiente y reportar el bloqueo; no sustituirlo por una simulación local.
+Un restaurante pequeño (aprox. 1–10 usuarios simultáneos) debe operar con **una app Next.js + PostgreSQL + Caddy por VPS**, sin Kubernetes, microservicios, servicios de monitoreo redundantes ni una plataforma de despliegue multi-tenant. Se conserva la seguridad necesaria: secretos externos, DB privada, aislamiento, TLS obligatorio al salir a Internet, migraciones controladas y CI protegido. Ver también `docs/architecture/small-restaurant-principles.md`.
+
+## Cierre del Change vs. puesta en servicio
+
+**Cerrar CHG-006:** comprobar Dockerfile/Compose reproducible, secretos y aislamiento, validación Caddy, HTTP→HTTPS con certificado **local** claramente identificado, y prueba real de arranque limpio, migración idempotente, actualización y smoke en proyectos Docker desechables. Documentar rollback compatible. No se exige alquilar un VPS público para aceptar código de infraestructura.
+
+**Antes de activar cualquier instalación accesible a clientes:** es obligatorio validar DNS, certificado HTTPS **público y confiable**, firewall/puertos desde fuera del host, almacenamiento persistente, permisos, migraciones, salud y recuperación/respaldo operativo. Registrar este gate en el runbook; si falta VPS/dominio, el estado es **NO VALIDADO PARA PRODUCCIÓN**, aunque CHG-006 quede 3/3. Jamás describir el certificado local como TLS público.
