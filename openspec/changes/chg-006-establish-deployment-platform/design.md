@@ -28,13 +28,23 @@
 - Automatizar instalación limpia y un despliegue controlado staging usando datos **sintéticos**. Registrar SHA/digest de versión, nombre de proyecto, estado de health, cert TLS, DB y volumetría aislada, migraciones, resultados de smoke, fallos controlados y recuperación. Probar segundo despliegue independiente sin reutilizar volúmenes ni secretos y sin afectar `dosvy-chg003-postgres` ni otros stacks.
 - La cobertura de CI de CHG-005 sigue siendo requerida; usar checks locales/CI existentes. Ni scripts ni workflow deben ejecutar despliegue a producción automáticamente desde PRs no confiables.
 
-## Verificación mínima / evidencia
+## Verificación mínima / evidencia proporcional
 
-T1: `docker compose -f deploy/compose.yaml config` con plantilla sintética y guardias negativas; build Docker reproducible; DB/app no publicados al host. T2: `caddy validate`, análisis de puertos/redes y comprobación HTTPS pública en staging (cuando exista dominio y acceso). T3: instalación limpia desde configuración autorizada; migración y reinicio; segunda instalación aislada; upgrade/rollback de imagen (sin deshacer SQL); tests de reachability de 5432 desde fuera. Ejecutar `npm ci`, `npm run typecheck`, `npm run lint`, `npm run check:boundaries`, `npm run build`, `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`, `npm run db:check`, `openspec validate chg-006-establish-deployment-platform --strict`, `git diff --check`. Reportar ejecución real, no asumir éxito.
+**Objetivo de ingeniería:** soportar instalaciones pequeñas (aprox. 1–10 usuarios) con una app, una base privada y Caddy, sin orquestadores ni infraestructura adicional innecesaria.
+
+- **T1 / Docker:** build Next.js standalone reproducible, `docker compose config` positivo/negativo, dos proyectos de instalación con DB/volúmenes/secretos distintos; preservar stacks locales y contenedores ajenos.
+- **T2 / proxy y redes:** Caddy valida el Caddyfile; HTTP→HTTPS comprobado en loopback con certificado **de prueba local**, persistencia y no publicación de PostgreSQL ni Next.js en Compose. Documentar DNS, firewall y cómo verificar un certificado público real, sin afirmar que existe.
+- **T3 / actualización:** prueba real en Docker **desechable** de instalación limpia, inicialización, migración versionada idempotente, reinicio, actualización de imagen y smoke. Documentar y evaluar la compatibilidad del rollback de aplicación; nunca revertir SQL ni borrar datos automáticamente. Si faltan evidencias locales, dejar la tarea abierta.
+
+Ejecutar `npm ci`, typecheck, lint, boundaries, build, unit, integración, E2E, `db:check`, TruffleHog, auditorías según CHG-005, `openspec validate chg-006-establish-deployment-platform --strict` y `git diff --check`. Marcar cada tarea solo por evidencia ejecutada.
+
+## Gate operativo obligatorio previo a producción (no equivale a T2/T3 locales)
+
+Para la **primera instalación pública y cada cambio relevante de host/dominio**, comprobar desde fuera del VPS un certificado TLS público válido y redirección HTTP→HTTPS, DNS correcto, puertos 5432/3000 bloqueados, firewall/SSH, aislamiento y secretos, volumen persistente, migración, health, smoke, reversión segura y plan de backup/restauración funcional. Registrar propietario, fecha, resultado y versión. Si alguna condición falta, **NO desplegar ni procesar datos reales**. Ningún resultado local prueba HTTPS público o las reglas de un firewall remoto.
 
 ## Riesgos / decisiones diferidas
 
-- Credenciales/VPS/dominio de staging no proporcionados: no declarar T3 completa ni cert real verificado.
-- La imagen actual de PostgreSQL y la ruta de datos se deben confirmar antes de montar volúmenes, especialmente al evolucionar versiones mayores.
-- Las variables `NEXT_PUBLIC_*` se hornean al compilar: no incluir secreto ni depender de ellas para variar configuración privada por restaurante.
-- Sección de backups y observabilidad avanzadas queda para CHG-007 y depende del despliegue real.
+- Sin VPS/dominio autorizado: el gate de producción está pendiente, pero no impide verificar la infraestructura **local** y cerrar CHG-006 técnicamente.
+- CHG-007 integra respaldo/recuperación proporcional a la operación. No operar con datos reales sin una recuperación probada.
+- Confirmar versiones y volúmenes PostgreSQL antes de actualizar imágenes; preservar protección de scripts locales y nunca emplear credenciales en Git.
+- `NEXT_PUBLIC_*` se incorpora en build; no usar para secretos o configuración privada por restaurante.
