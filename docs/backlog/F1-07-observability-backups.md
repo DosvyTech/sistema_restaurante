@@ -1,7 +1,7 @@
 # F1-07 — Monitoreo, respaldos y recuperación
 
 **Prioridad:** P0  
-**Dependencia bloqueante:** F1-06 / CHG-006 implementado y validado en staging  
+**Dependencia bloqueante:** F1-06 / CHG-006 implementado e integrado, con instalación/actualización Docker aislada validada  
 **Estado:** NOT_STARTED (planificación solamente)  
 **Change:** CHG-007 — `chg-007-establish-observability-and-backups`
 
@@ -11,9 +11,9 @@ Como operador Dosvy, quiero detectar incidentes y recuperar una instalación sin
 
 ## Alcance
 
-1. Logs JSON con retención y sin secretos, salud/liveness/readiness, alertas independientes del VPS por indisponibilidad app/DB, fallos backup, WAL atrasado, recursos y TLS.
-2. pgBackRest compatible con PostgreSQL del despliegue, repositorio de respaldos externo al VPS, cifrado y claves recuperables, full/differential/incremental y políticas de retención. WAL archivado y monitorizado; nunca solo snapshots locales.
-3. Restore/PITR de datos sintéticos en staging nuevo y aislado, comprobación de integridad y de conectividad/app; medir pérdida de datos y tiempo total de recuperación desde simulación de pérdida del VPS.
+1. Observabilidad ligera: logs JSON/rotación sin secretos, health de app/DB y alertas externas esenciales por caída, disco insuficiente y fallos/atrasos de backup; sin paneles complejos salvo necesidad.
+2. pgBackRest o alternativa sencilla técnicamente equivalente, respaldo cifrado **externo al VPS real** antes de producción, claves recuperables y retención; WAL/PITR si es necesario para RPO de 15 minutos. No se aceptan solo snapshots locales.
+3. Restore/PITR con datos sintéticos en entorno de prueba separado y descartable, integridad y métricas RPO/RTO del ejercicio; sin presentar la simulación como prueba real del VPS público.
 
 ## Tres tareas
 
@@ -36,4 +36,4 @@ Como operador Dosvy, quiero detectar incidentes y recuperar una instalación sin
 
 ## Restricciones
 
-No iniciar Apply antes de aceptar CHG-006. No usar datos reales, VPS de clientes, volúmenes persistentes existentes ni repositorio de copias de producción en pruebas. No publicar bucket, credenciales ni claves. No confundir herramienta instalada con copias probadas. Si faltan recursos externos autorizados, documentar bloqueo y mantener tareas abiertas.
+No iniciar Apply antes de integrar CHG-006 y comprobar su despliegue local aislado. El gate de producción real es independiente y obligatorio. No usar datos reales, VPS de clientes, volúmenes persistentes existentes ni repositorio de copias de producción en pruebas. No publicar bucket, credenciales ni claves. No confundir herramienta instalada con copias probadas. Si faltan recursos externos autorizados, documentar bloqueo y mantener tareas abiertas.

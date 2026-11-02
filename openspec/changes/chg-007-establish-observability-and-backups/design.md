@@ -2,13 +2,13 @@
 
 ## Contexto y precondiciones
 
-CHG-006 debe haberse implementado y validado en staging: imágenes/Compose, Caddy, Postgres privado, TLS, identificadores por restaurante, proceso de release y migraciones. Antes de Apply inspeccionar sus artefactos y versiones efectivas. CHG-003 y CHG-004 establecen DB y pruebas, CHG-005 exige seis checks en PR a main. CHG-007 debe preservar aislamiento y reglas existentes.
+CHG-006 debe haberse integrado con validación de **despliegue local en Docker aislado**: imágenes/Compose, Caddy, PostgreSQL privado, identificadores por restaurante, migraciones y actualización. El gate de TLS público/seguridad del VPS sigue siendo obligatorio **antes de una instalación real**, no para iniciar el desarrollo de CHG-007. Antes de Apply inspeccionar sus artefactos y versiones efectivas. CHG-003 y CHG-004 establecen DB y pruebas, CHG-005 exige seis checks en PR a main. CHG-007 debe preservar aislamiento y reglas existentes.
 
 ## D1 — Observabilidad y alertas (T1)
 
 - Registros estructurados JSON de app y procesos con timestamp UTC, servicio, entorno, instalación opaca, nivel, categoría, correlación/request ID y resultado; no volcar tokens, credenciales, cuerpo de facturas, PII ni cadenas DB. Proxies y Docker con rotación/retención y límites de disco; acceso restringido a operadores.
 - Liveness y readiness separados cuando sea útil: app responde, PostgreSQL alcanzable a través de red interna sin reflejar secretos o información sensible al cliente; fallos de Caddy/TLS, espacio, memoria, recursos, errores app y retraso/fracaso backup. Definir claramente qué condición reinicia un servicio y cuál solo alerta, con umbrales y ventanas para evitar tormentas.
-- Stack mínimo adecuado a VPS pequeño (p. ej. healthchecks + exporter/colector + notificación) configurable por instalación; no meter credenciales de mensajería en imagen, repositorio o PR. Integración externa supervisada o host de monitoreo separado evita punto único de falla del propio VPS.
+- Stack mínimo adecuado a VPS pequeño (preferir healthchecks de Compose, logs Docker con rotación y un servicio externo simple de aviso; no desplegar Prometheus/Grafana/ELK salvo evidencia de necesidad), configurable por instalación; no meter credenciales de mensajería en imagen, repositorio o PR. Integración externa supervisada o host de monitoreo separado evita punto único de falla del propio VPS.
 - Pruebas: detención controlada de servicio/indisponibilidad DB y condición ficticia backup atrasado, recepción de aviso real en canal autorizado, recuperación y cierre del aviso, prueba de no exposición de secretos. Señales de alerta con owner y documentación.
 
 ## D2 — pgBackRest, backup externo cifrado y WAL (T2)
@@ -31,4 +31,4 @@ T1: logs sin secretos + alertas observadas en canales autorizados, recuperación
 
 ## Riesgos
 
-Staging o repositorio externo faltantes impiden concluir T2/T3. Un reinicio o DNS cache puede afectar mediciones; registrar alcance. Claves perdidas hacen backups irrecuperables: verificar custodia y recuperación. RTO depende de aprovisionamiento y tamaño DB; no prometer objetivo sin evidencia. Alertar desde el mismo VPS puede fallar cuando cae el host: usar ruta independiente para alertas críticas.
+Un VPS público no es precondición para comenzar; para T2/T3 se necesita evidencia honesta de respaldo y restauración sobre almacenamiento de prueba separado del servicio, y para producción un repositorio real fuera del VPS. La ausencia de recursos de prueba suficientes impide marcar tareas no demostradas. Un reinicio o DNS cache puede afectar mediciones; registrar alcance. Claves perdidas hacen backups irrecuperables: verificar custodia y recuperación. RTO depende de aprovisionamiento y tamaño DB; no prometer objetivo sin evidencia. Alertar desde el mismo VPS puede fallar cuando cae el host: usar ruta independiente para alertas críticas.
