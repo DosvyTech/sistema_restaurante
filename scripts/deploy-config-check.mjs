@@ -2,7 +2,7 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { validateDeploymentConfiguration } from "./deployment-config.mjs";
+import { validateDeploymentConfiguration, validatePgBackRestConfiguration } from "./deployment-config.mjs";
 
 function isInside(parent, candidate) {
   const pathFromParent = relative(parent, candidate);
@@ -54,6 +54,11 @@ async function main() {
     "PostgreSQL password secret",
     repositoryRoot,
   );
+  const pgBackRestConfiguration = await readExternalSecret(
+    process.env.DOSVY_PGBACKREST_CONFIG_FILE,
+    "pgBackRest configuration",
+    repositoryRoot,
+  );
   const configuration = validateDeploymentConfiguration({
     installationId: process.env.DOSVY_INSTALLATION_ID,
     composeProject: process.env.DOSVY_COMPOSE_PROJECT,
@@ -66,9 +71,14 @@ async function main() {
     databaseUrl,
     postgresPassword,
   });
+  validatePgBackRestConfiguration({
+    contents: pgBackRestConfiguration,
+    installationId: configuration.installationId,
+    databaseUser: process.env.DOSVY_DATABASE_USER,
+  });
 
   console.info(
-    `Deployment configuration passed for ${configuration.installationId}; secrets are external and image references are digest-pinned.`,
+    `Deployment configuration passed for ${configuration.installationId}; database and backup secrets are external and image references are digest-pinned.`,
   );
 }
 

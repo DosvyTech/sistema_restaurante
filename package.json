@@ -22,7 +22,10 @@
     "db:check": "node --conditions=react-server ./node_modules/drizzle-kit/bin.cjs check",
     "db:migrate": "node --conditions=react-server --env-file-if-exists=.env --import tsx scripts/db-migrate.ts",
     "db:test": "node --conditions=react-server --env-file-if-exists=.env --import tsx --test tests/db/config.test.ts tests/db/transactions.test.ts",
-    "db:verify": "node --conditions=react-server --env-file-if-exists=.env --import tsx scripts/db-verify.ts"
+    "db:verify": "node --conditions=react-server --env-file-if-exists=.env --import tsx scripts/db-verify.ts",
+    "ops:monitor": "node scripts/deployment-monitor.mjs",
+    "ops:backup:configure": "node scripts/configure-pgbackrest-archive.mjs",
+    "ops:backup": "node scripts/run-pgbackrest-backup.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",
