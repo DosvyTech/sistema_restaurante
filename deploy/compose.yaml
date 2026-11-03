@@ -1,19 +1,29 @@
 name: ${DOSVY_COMPOSE_PROJECT:?Set DOSVY_COMPOSE_PROJECT to a unique installation project}
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
   postgres:
     image: ${DOSVY_POSTGRES_IMAGE:?Set the approved PostgreSQL image and digest}
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${DOSVY_DATABASE_NAME:?Set an installation-specific database name}
       POSTGRES_USER: ${DOSVY_DATABASE_USER:?Set an installation-specific database user}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
+      - source: pgbackrest_config
+        target: pgbackrest_config
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
       - data
+      - backup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
@@ -24,6 +34,7 @@ services:
   app:
     image: ${DOSVY_APP_IMAGE:?Set the immutable application release image}
     restart: unless-stopped
+    logging: *default-logging
     environment:
       DOSVY_INSTALLATION_ID: ${DOSVY_INSTALLATION_ID:?Set the installation identifier}
       NODE_ENV: production
@@ -45,6 +56,7 @@ services:
   caddy:
     image: ${DOSVY_CADDY_IMAGE:?Set the approved Caddy image and digest}
     restart: unless-stopped
+    logging: *default-logging
     environment:
       DOSVY_DOMAIN: ${DOSVY_DOMAIN:?Set the authorized DNS name}
     ports:
@@ -79,6 +91,7 @@ services:
       - operations
     command: ["node", "scripts/deploy-migrate.mjs"]
     restart: "no"
+    logging: *default-logging
     environment:
       DOSVY_INSTALLATION_ID: ${DOSVY_INSTALLATION_ID:?Set the installation identifier}
       DOSVY_MIGRATION_CONFIRMATION: ${DOSVY_MIGRATION_CONFIRMATION:-}
@@ -97,6 +110,8 @@ secrets:
     file: ${DOSVY_POSTGRES_PASSWORD_FILE:?Set a password file outside the repository}
   database_url:
     file: ${DOSVY_DATABASE_URL_FILE:?Set a database URL file outside the repository}
+  pgbackrest_config:
+    file: ${DOSVY_PGBACKREST_CONFIG_FILE:?Set an encrypted S3 pgBackRest config outside the repository}
 
 volumes:
   postgres_data:
@@ -107,3 +122,4 @@ networks:
   edge:
   data:
     internal: true
+  backup:

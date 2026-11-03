@@ -3,6 +3,48 @@ import { validateDeploymentTarget } from "./deployment-target.mjs";
 const installationIdentifierPattern = /^[a-z][a-z0-9_]{0,23}$/;
 const imageDigestPattern = /^.+@sha256:[a-f0-9]{64}$/i;
 
+export function validatePgBackRestConfiguration({ contents, installationId, databaseUser }) {
+  if (typeof contents !== "string" || contents.length === 0 || contents.length > 16_384) {
+    throw new Error("pgBackRest configuration file is invalid.");
+  }
+  const values = new Map();
+  let section = "global";
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const sectionMatch = /^\[([a-z0-9_-]+)\]$/i.exec(line);
+    if (sectionMatch) {
+      section = sectionMatch[1];
+      continue;
+    }
+    const setting = /^([a-z0-9-]+)\s*=\s*(.*?)\s*$/i.exec(line);
+    if (!setting) throw new Error("pgBackRest configuration syntax is invalid.");
+    values.set(`${section}.${setting[1]}`, setting[2]);
+  }
+  const required = [
+    ["global.repo1-type", "s3"],
+    ["global.repo1-s3-uri-style", "path"],
+    ["global.repo1-storage-port", "443"],
+    ["global.repo1-storage-verify-tls", "y"],
+    ["global.repo1-cipher-type", "aes-256-cbc"],
+    ["global.repo1-retention-full-type", "count"],
+    ["global.repo1-retention-full", "2"],
+    [`${installationId}.pg1-path`, "/var/lib/postgresql/18/docker"],
+    [`${installationId}.pg1-user`, databaseUser],
+  ];
+  for (const [key, expected] of required) {
+    if (values.get(key) !== expected) throw new Error("pgBackRest configuration does not meet deployment requirements.");
+  }
+  for (const key of ["global.repo1-s3-endpoint", "global.repo1-s3-bucket", "global.repo1-s3-key", "global.repo1-s3-key-secret", "global.repo1-cipher-pass"]) {
+    const value = values.get(key);
+    if (!value || /replace_with|example\.net|<|>/i.test(value)) {
+      throw new Error("pgBackRest S3 credentials, endpoint, bucket and encryption key must be configured externally.");
+    }
+  }
+  if (!contents.includes(`[${installationId}]`)) throw new Error("pgBackRest stanza must match the installation identifier.");
+  return true;
+}
+
 function requireValue(value, label) {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`${label} is required.`);

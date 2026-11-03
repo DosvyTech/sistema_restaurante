@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateDeploymentConfiguration } from "../../scripts/deployment-config.mjs";
+import { validateDeploymentConfiguration, validatePgBackRestConfiguration } from "../../scripts/deployment-config.mjs";
 
 function databaseUrl(password: string, database = "dosvy_restaurant_01") {
   const url = new URL("postgresql://postgres");
@@ -63,5 +63,23 @@ describe("validateDeploymentConfiguration", () => {
         databaseUrl: databaseUrl("wrong-password"),
       }),
     ).toThrow(/password file/i);
+  });
+});
+
+describe("validatePgBackRestConfiguration", () => {
+  const config = `[global]\nrepo1-type=s3\nrepo1-path=/dosvy/restaurant_01\nrepo1-s3-bucket=private-bucket\nrepo1-s3-endpoint=s3.provider.invalid\nrepo1-s3-region=us-east-1\nrepo1-s3-key=synthetic-access\nrepo1-s3-key-secret=synthetic-secret\nrepo1-s3-uri-style=path\nrepo1-storage-port=443\nrepo1-storage-verify-tls=y\nrepo1-cipher-type=aes-256-cbc\nrepo1-cipher-pass=synthetic-key\nrepo1-retention-full-type=count\nrepo1-retention-full=2\n[restaurant_01]\npg1-path=/var/lib/postgresql/18/docker\npg1-user=dosvy_owner\n`;
+
+  it("accepts external S3 configuration with verified TLS and encryption", () => {
+    expect(validatePgBackRestConfiguration({ contents: config, installationId: "restaurant_01", databaseUser: "dosvy_owner" })).toBe(true);
+  });
+
+  it("rejects disabled TLS verification, placeholders, and mismatched stanza identity", () => {
+    expect(() => validatePgBackRestConfiguration({ contents: config.replace("verify-tls=y", "verify-tls=n"), installationId: "restaurant_01", databaseUser: "dosvy_owner" })).toThrow(/requirements/i);
+    expect(() => validatePgBackRestConfiguration({ contents: config.replace("synthetic-secret", "REPLACE_WITH_SECRET"), installationId: "restaurant_01", databaseUser: "dosvy_owner" })).toThrow(/configured externally/i);
+    expect(() => validatePgBackRestConfiguration({ contents: config, installationId: "restaurant_02", databaseUser: "dosvy_owner" })).toThrow(/requirements/i);
+  });
+
+  it("never includes configured credential values in validation errors", () => {
+    expect(() => validatePgBackRestConfiguration({ contents: config.replace("synthetic-key", ""), installationId: "restaurant_01", databaseUser: "dosvy_owner" })).toThrow("pgBackRest S3 credentials, endpoint, bucket and encryption key must be configured externally.");
   });
 });

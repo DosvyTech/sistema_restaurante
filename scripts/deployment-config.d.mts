@@ -14,3 +14,9 @@ export interface DeploymentConfigurationInput {
 export declare function validateDeploymentConfiguration(
   configuration: DeploymentConfigurationInput,
 ): Pick<DeploymentConfigurationInput, "installationId" | "composeProject" | "databaseName" | "domain">;
+
+export declare function validatePgBackRestConfiguration(input: {
+  contents: string;
+  installationId: string;
+  databaseUser: string;
+}): true;
