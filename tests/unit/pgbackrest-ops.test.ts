@@ -1,25 +1,27 @@
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { validateArchiveSetup } from "../../scripts/configure-pgbackrest-archive.mjs";
 import { clearBackupFailureFlag, findEncryptedBackup, validateBackupRun, writeBackupFailureFlag } from "../../scripts/run-pgbackrest-backup.mjs";
 
-const rootPath = "C:/Users/oscar/Dosvy/sistema_restaurante";
+const rootPath = fileURLToPath(new URL("../../", import.meta.url));
+const externalDirectory = join(tmpdir(), "dosvy-operation-tests");
 
 describe("pgBackRest operation guards", () => {
   it("limits archive setup to a matching installation and external env file", () => {
-    expect(validateArchiveSetup({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: "C:/ProgramData/Dosvy/restaurant_01/deployment.env" })).toBe(true);
-    expect(() => validateArchiveSetup({ project: "other-project", installationId: "restaurant_01", envFile: "C:/ProgramData/Dosvy/env" })).toThrow(/project/i);
-    expect(() => validateArchiveSetup({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: `${rootPath}/.env` })).toThrow(/outside/i);
+    expect(validateArchiveSetup({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: join(externalDirectory, "deployment.env") })).toBe(true);
+    expect(() => validateArchiveSetup({ project: "other-project", installationId: "restaurant_01", envFile: join(externalDirectory, "env") })).toThrow(/project/i);
+    expect(() => validateArchiveSetup({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: join(rootPath, ".env") })).toThrow(/outside/i);
   });
 
   it("allows only supported backup modes and external marker paths", () => {
-    expect(validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: "C:/ProgramData/Dosvy/deployment.env", markerFile: "C:/ProgramData/Dosvy/backup-success", failureFlagFile: "C:/ProgramData/Dosvy/backup-failed", type: "full" })).toBe(true);
-    expect(() => validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: "C:/ProgramData/Dosvy/deployment.env", markerFile: `${rootPath}/marker`, failureFlagFile: "C:/ProgramData/Dosvy/backup-failed", type: "full" })).toThrow(/outside/i);
-    expect(() => validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: "C:/ProgramData/Dosvy/deployment.env", markerFile: "C:/ProgramData/Dosvy/backup-success", failureFlagFile: `${rootPath}/failed`, type: "full" })).toThrow(/outside/i);
-    expect(() => validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: "C:/ProgramData/Dosvy/deployment.env", markerFile: "C:/ProgramData/Dosvy/backup-success", failureFlagFile: "C:/ProgramData/Dosvy/backup-failed", type: "invalid" })).toThrow(/type/i);
+    expect(validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: join(externalDirectory, "deployment.env"), markerFile: join(externalDirectory, "backup-success"), failureFlagFile: join(externalDirectory, "backup-failed"), type: "full" })).toBe(true);
+    expect(() => validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: join(externalDirectory, "deployment.env"), markerFile: join(rootPath, "marker"), failureFlagFile: join(externalDirectory, "backup-failed"), type: "full" })).toThrow(/outside/i);
+    expect(() => validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: join(externalDirectory, "deployment.env"), markerFile: join(externalDirectory, "backup-success"), failureFlagFile: join(rootPath, "failed"), type: "full" })).toThrow(/outside/i);
+    expect(() => validateBackupRun({ project: "dosvy-restaurant-01", installationId: "restaurant_01", envFile: join(externalDirectory, "deployment.env"), markerFile: join(externalDirectory, "backup-success"), failureFlagFile: join(externalDirectory, "backup-failed"), type: "invalid" })).toThrow(/type/i);
   });
 
   it("accepts encrypted, successful pgBackRest metadata without exposing configuration", () => {
